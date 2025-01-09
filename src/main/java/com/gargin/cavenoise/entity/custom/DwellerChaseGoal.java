@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.BlockPos.MutableBlockPos;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
@@ -838,7 +839,7 @@ public class DwellerChaseGoal extends Goal {
          this.resetAttackCooldown();
          this.mob.swing(InteractionHand.MAIN_HAND);
          this.mob.doHurtTarget(pEnemy);
-         pEnemy.hurt(this.mob.level.damageSources().generic(), (float)this.cavedweller.getAttributeValue(Attributes.ATTACK_DAMAGE));
+         pEnemy.hurt(DamageSource.GENERIC.bypassArmor(), (float)this.cavedweller.getAttributeValue(Attributes.ATTACK_DAMAGE));
          if (pEnemy.getOffhandItem().is(Items.SHIELD)) {
             pEnemy.getOffhandItem().hurtAndBreak(10000, pEnemy, (e) -> {
                e.broadcastBreakEvent(InteractionHand.OFF_HAND);

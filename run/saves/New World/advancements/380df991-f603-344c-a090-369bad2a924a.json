@@ -1,21 +1,59 @@
 {
-  "minecraft:recipes/decorations/crafting_table": {
+  "minecraft:recipes/transportation/acacia_boat": {
     "criteria": {
-      "unlock_right_away": "2025-01-08 19:59:09 -0600"
+      "in_water": "2025-01-09 10:14:22 -0600"
+    },
+    "done": true
+  },
+  "minecraft:recipes/transportation/oak_boat": {
+    "criteria": {
+      "in_water": "2025-01-09 10:14:22 -0600"
+    },
+    "done": true
+  },
+  "minecraft:recipes/transportation/dark_oak_boat": {
+    "criteria": {
+      "in_water": "2025-01-09 10:14:22 -0600"
+    },
+    "done": true
+  },
+  "minecraft:adventure/root": {
+    "criteria": {
+      "killed_by_something": "2025-01-09 10:14:54 -0600"
+    },
+    "done": true
+  },
+  "minecraft:recipes/transportation/birch_boat": {
+    "criteria": {
+      "in_water": "2025-01-09 10:14:22 -0600"
+    },
+    "done": true
+  },
+  "minecraft:recipes/transportation/jungle_boat": {
+    "criteria": {
+      "in_water": "2025-01-09 10:14:22 -0600"
+    },
+    "done": true
+  },
+  "minecraft:recipes/transportation/mangrove_boat": {
+    "criteria": {
+      "in_water": "2025-01-09 10:14:22 -0600"
+    },
+    "done": true
+  },
+  "minecraft:recipes/transportation/spruce_boat": {
+    "criteria": {
+      "in_water": "2025-01-09 10:14:22 -0600"
     },
     "done": true
   },
   "minecraft:adventure/adventuring_time": {
     "criteria": {
-      "minecraft:taiga": "2025-01-08 19:59:12 -0600"
+      "minecraft:beach": "2025-01-09 10:14:11 -0600",
+      "minecraft:cold_ocean": "2025-01-09 10:14:24 -0600",
+      "minecraft:plains": "2025-01-09 10:08:06 -0600"
     },
     "done": false
   },
-  "minecraft:adventure/root": {
-    "criteria": {
-      "killed_by_something": "2025-01-08 20:08:40 -0600"
-    },
-    "done": true
-  },
-  "DataVersion": 3337
+  "DataVersion": 3218
 }

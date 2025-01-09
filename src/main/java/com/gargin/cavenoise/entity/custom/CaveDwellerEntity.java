@@ -133,8 +133,8 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
       this.alreadyPlayedSpottedSound = false;
       this.startedPlayingChaseSound = false;
       this.alreadyPlayedDeathSound = false;
-      this.setMaxUpStep(this.defaultMaxUpStep);
-      this.refreshDimensions();
+      this.maxUpStep = this.defaultMaxUpStep;
+      refreshDimensions();
       this.twoBlockSpaceCooldown = 5.0F;
       this.oldPos = this.position();
       this.ticksTillRemove = 6000;
@@ -318,18 +318,18 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
    public Path createShortPath(LivingEntity pathTarget) {
       this.returnShort = true;
       this.refreshDimensions();
-      this.setMaxUpStep(100.0F);
+      this.maxUpStep = 100.0F;
       Path shortPath = this.getNavigation().createPath(pathTarget, 0);
-      this.setMaxUpStep(0.0F);
+      this.maxUpStep = 0.0F;
       this.returnShort = false;
       this.refreshDimensions();
       return shortPath;
    }
 
    public Path createClimbPath(LivingEntity pathTarget) {
-      this.setMaxUpStep(100.0F);
+      this.maxUpStep = 100.0F;
       Path climbPath = this.getNavigation().createPath(pathTarget, 0);
-      this.setMaxUpStep(this.defaultMaxUpStep);
+      this.maxUpStep = this.defaultMaxUpStep;
       return climbPath;
    }
 
