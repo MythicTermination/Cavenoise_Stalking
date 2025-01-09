@@ -132,12 +132,12 @@ public class DwellerFleeGoal extends Goal {
 
       MutableBlockPos blockpos$mutableblockpos = new MutableBlockPos(this.fleeX, this.fleeY, this.fleeZ);
 
-      while(blockpos$mutableblockpos.getY() > this.cavedweller.level().getMinBuildHeight() && !this.cavedweller.level().getBlockState(blockpos$mutableblockpos).blocksMotion()) {
+      while(blockpos$mutableblockpos.getY() > this.cavedweller.level.getMinBuildHeight() && !this.cavedweller.level.getBlockState(blockpos$mutableblockpos).getMaterial().blocksMotion()) {
          blockpos$mutableblockpos.move(Direction.DOWN);
       }
 
-      BlockState blockstate = this.cavedweller.level().getBlockState(blockpos$mutableblockpos);
-      boolean flag = blockstate.blocksMotion();
+      BlockState blockstate = this.cavedweller.level.getBlockState(blockpos$mutableblockpos);
+      boolean flag = blockstate.getMaterial().blocksMotion();
       boolean flag1 = blockstate.getFluidState().is(FluidTags.WATER);
       return flag && !flag1;
    }

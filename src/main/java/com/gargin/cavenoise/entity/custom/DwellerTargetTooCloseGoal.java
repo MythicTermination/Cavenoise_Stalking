@@ -27,7 +27,7 @@ public class DwellerTargetTooCloseGoal extends NearestAttackableTargetGoal<Playe
       if (this.cavedweller.isInvisible()) {
          return false;
       } else {
-         this.setPendingTarget(this.cavedweller.level().getNearestPlayer(this.cavedweller, (double)this.distanceThreshold));
+         this.setPendingTarget(this.cavedweller.level.getNearestPlayer(this.cavedweller, (double)this.distanceThreshold));
          if (this.pendingTarget == null) {
             return false;
          } else {

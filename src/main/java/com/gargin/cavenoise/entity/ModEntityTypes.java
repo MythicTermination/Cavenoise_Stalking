@@ -20,8 +20,8 @@ public class ModEntityTypes {
 
    static {
       ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, "cavenoise");
-      CAVE_DWELLER = ENTITY_TYPES.register("cave_dweller", () -> {
-         return Builder.of(CaveDwellerEntity::new, MobCategory.MONSTER).sized(0.4F, 3.0F).build((new ResourceLocation("cavenoise", "cave_dweller")).toString());
+      CAVE_DWELLER = ENTITY_TYPES.register("cavenoise", () -> {
+         return Builder.of(CaveDwellerEntity::new, MobCategory.MONSTER).sized(0.4F, 3.0F).build((new ResourceLocation("cavenoise", "cavenoise")).toString());
       });
    }
 }

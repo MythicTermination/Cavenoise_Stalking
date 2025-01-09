@@ -75,7 +75,7 @@ public class DwellerStalkGoal extends Goal {
    }
 
    private LivingEntity getTargetToStalk() {
-      return this.cavedweller.level().getNearestPlayer(this.cavedweller, 200.0D);
+      return this.cavedweller.level.getNearestPlayer(this.cavedweller, 200.0D);
    }
 
    public void tick() {

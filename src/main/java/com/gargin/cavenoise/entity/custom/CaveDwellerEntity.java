@@ -190,7 +190,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
          BlockPos blockPosition3 = new BlockPos((int)Math.floor(posX), (int)Math.floor(posY + 2.0D), (int)Math.floor(posZ));
          BlockPos blockPosition4 = new BlockPos((int)Math.floor(posX), (int)Math.floor(posY - 1.0D), (int)Math.floor(posZ));
          --runFor;
-         if (!this.level().getBlockState(blockPosition).blocksMotion() && !this.level().getBlockState(blockPosition2).blocksMotion() && !this.level().getBlockState(blockPosition3).blocksMotion() && this.level().getBlockState(blockPosition4).blocksMotion()) {
+         if (!this.level.getBlockState(blockPosition).getMaterial().blocksMotion() && !this.level.getBlockState(blockPosition2).getMaterial().blocksMotion() && !this.level.getBlockState(blockPosition3).getMaterial().blocksMotion() && this.level.getBlockState(blockPosition4).getMaterial().blocksMotion()) {
             break;
          }
       }
@@ -206,8 +206,8 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
       }
 
       MutableBlockPos blockpos$mutableblockpos = new MutableBlockPos(this.position().x, this.position().y + 2.0D, this.position().z);
-      BlockState blockstate = this.level().getBlockState(blockpos$mutableblockpos);
-      boolean flag = blockstate.blocksMotion();
+      BlockState blockstate = this.level.getBlockState(blockpos$mutableblockpos);
+      boolean flag = blockstate.getMaterial().blocksMotion();
       if (flag) {
          this.twoBlockSpaceTimer = this.twoBlockSpaceCooldown;
          this.inTwoBlockSpace = true;
@@ -276,7 +276,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
                this.getTarget().sendSystemMessage(Component.nullToEmpty("anim does not match name, setting." + anim + " -> " + animName));
             }
 
-            if (this.level().isClientSide()) {
+            if (this.level.isClientSide()) {
                this.getAnimatableInstanceCache().getManagerForId((long)this.getId()).tryTriggerAnimation(controllerName, animName);
             } else {
                GeckoLibNetwork.send(new EntityAnimTriggerPacket(this.getId(), controllerName, animName), PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> {
@@ -289,7 +289,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             this.getTarget().sendSystemMessage(Component.nullToEmpty("anim null and setting"));
          }
 
-         if (this.level().isClientSide()) {
+         if (this.level.isClientSide()) {
             this.getAnimatableInstanceCache().getManagerForId((long)this.getId()).tryTriggerAnimation(controllerName, animName);
          } else {
             GeckoLibNetwork.send(new EntityAnimTriggerPacket(this.getId(), controllerName, animName), PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> {
@@ -373,7 +373,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
    }
 
    private void playEntitySound(SoundEvent soundEvent, float volume, float pitch) {
-      this.level().playSound((Player)null, this, soundEvent, SoundSource.HOSTILE, volume, pitch);
+      this.level.playSound((Player)null, this, soundEvent, SoundSource.HOSTILE, volume, pitch);
    }
 
    private void playBlockPosSound(SoundEvent soundEvent, float volume, float pitch) {

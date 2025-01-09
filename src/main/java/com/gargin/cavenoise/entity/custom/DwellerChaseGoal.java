@@ -100,7 +100,7 @@ public class DwellerChaseGoal extends Goal {
       if (this.cavedweller.isInvisible()) {
          return false;
       } else if (this.cavedweller.rRollResult == 0 && !this.cavedweller.forcedStalk) {
-         long i = this.mob.level().getGameTime();
+         long i = this.mob.level.getGameTime();
          if (i - this.lastCanUseCheck < 20L) {
             return false;
          } else {
@@ -229,11 +229,11 @@ public class DwellerChaseGoal extends Goal {
          }
 
          MutableBlockPos blockpos$mutableblockpos = new MutableBlockPos(this.xPathTargetVec.x, this.xPathTargetVec.y, this.xPathTargetVec.z);
-         BlockState blockstate = this.cavedweller.level().getBlockState(blockpos$mutableblockpos);
-         boolean xBlocked = blockstate.blocksMotion();
+         BlockState blockstate = this.cavedweller.level.getBlockState(blockpos$mutableblockpos);
+         boolean xBlocked = blockstate.getMaterial().blocksMotion();
          blockpos$mutableblockpos = new MutableBlockPos(this.zPathTargetVec.x, this.zPathTargetVec.y, this.zPathTargetVec.z);
-         blockstate = this.cavedweller.level().getBlockState(blockpos$mutableblockpos);
-         boolean zBlocked = blockstate.blocksMotion();
+         blockstate = this.cavedweller.level.getBlockState(blockpos$mutableblockpos);
+         boolean zBlocked = blockstate.getMaterial().blocksMotion();
          if (xBlocked) {
             this.vecMobPos = this.zPathStartVec;
             this.vecTargetPos = this.zPathTargetVec;
@@ -315,8 +315,8 @@ public class DwellerChaseGoal extends Goal {
                return false;
             } else {
                MutableBlockPos blockpos$mutableblockpos = new MutableBlockPos(blockpos.getX(), blockpos.getY() + 1, blockpos.getZ());
-               BlockState blockstate = this.cavedweller.level().getBlockState(blockpos$mutableblockpos);
-               boolean flag = blockstate.blocksMotion();
+               BlockState blockstate = this.cavedweller.level.getBlockState(blockpos$mutableblockpos);
+               boolean flag = blockstate.getMaterial().blocksMotion();
                boolean flag2 = this.cavedweller.distanceToSqr((double)blockpos.getX(), (double)blockpos.getY(), (double)blockpos.getZ()) < 1.5D;
                return flag;
             }
@@ -466,7 +466,7 @@ public class DwellerChaseGoal extends Goal {
          this.stopClimbing();
       }
 
-      while(this.climbInt < this.maxClimb && !this.cavedweller.level().getBlockState(this.climbPos).isAir()) {
+      while(this.climbInt < this.maxClimb && !this.cavedweller.level.getBlockState(this.climbPos).isAir()) {
          this.climbPos = new BlockPos(this.climbPos.getX(), this.climbPos.getY() + 1, this.climbPos.getZ());
          ++this.climbInt;
       }
@@ -480,13 +480,13 @@ public class DwellerChaseGoal extends Goal {
          this.cavedweller.setYHeadRot((float)rotAngle);
          this.cavedweller.moveTo(this.climbStartVec.x, (double)this.climbRelativeY + this.climbStartVec.y, this.climbStartVec.z, (float)rotAngle, (float)rotAngle);
          BlockPos blockCheckHead = new BlockPos((int)Math.floor(this.climbStartVec.x), (int)Math.floor(this.climbStartVec.y + (double)this.climbRelativeY) + 2, (int)Math.floor(this.climbStartVec.z));
-         if (!this.cavedweller.level().getBlockState(blockCheckHead).isAir()) {
+         if (!this.cavedweller.level.getBlockState(blockCheckHead).isAir()) {
             BlockPos spotToCreateArrayAround = new BlockPos(this.climbPos.getX(), blockCheckHead.getY(), this.climbPos.getZ());
             int blockAmountCovered = 0;
 
             for(int x = -1; x < 2; ++x) {
                for(int z = -1; z < 2; ++z) {
-                  if ((x != 0 || z != 0) && !this.cavedweller.level().getBlockState(new BlockPos(spotToCreateArrayAround.getX() + x, spotToCreateArrayAround.getY(), spotToCreateArrayAround.getZ() + z)).isAir()) {
+                  if ((x != 0 || z != 0) && !this.cavedweller.level.getBlockState(new BlockPos(spotToCreateArrayAround.getX() + x, spotToCreateArrayAround.getY(), spotToCreateArrayAround.getZ() + z)).isAir()) {
                      ++blockAmountCovered;
                   }
                }
@@ -666,7 +666,7 @@ public class DwellerChaseGoal extends Goal {
    }
 
    private boolean checkIfSpotIsClimbSwappable(BlockPos pPos) {
-      return this.cavedweller.level().getBlockState(new BlockPos(pPos.getX(), pPos.getY() - 1, pPos.getZ())).isAir() && this.cavedweller.level().getBlockState(new BlockPos(pPos.getX(), pPos.getY() - 2, pPos.getZ())).isAir();
+      return this.cavedweller.level.getBlockState(new BlockPos(pPos.getX(), pPos.getY() - 1, pPos.getZ())).isAir() && this.cavedweller.level.getBlockState(new BlockPos(pPos.getX(), pPos.getY() - 2, pPos.getZ())).isAir();
    }
 
    private BlockPos[] createBlockPosClimbArray(BlockPos origin) {
@@ -704,7 +704,7 @@ public class DwellerChaseGoal extends Goal {
    }
 
    private boolean checkIfSpotIsOpening(BlockPos pPos) {
-      return this.cavedweller.level().getBlockState(new BlockPos(pPos.getX(), pPos.getY(), pPos.getZ())).isAir();
+      return this.cavedweller.level.getBlockState(new BlockPos(pPos.getX(), pPos.getY(), pPos.getZ())).isAir();
    }
 
    public double getDistance(Vec3 a, Vec3 b) {
@@ -752,18 +752,18 @@ public class DwellerChaseGoal extends Goal {
             for(int dY = -this.torchDestructionRadius; dY < this.torchDestructionRadius + 1; ++dY) {
                for(int dZ = -this.torchDestructionRadius; dZ < this.torchDestructionRadius + 1; ++dZ) {
                   this.checkBlockForTorch = new BlockPos(this.currentBlock.getX() + dX, this.currentBlock.getY() + dY, this.currentBlock.getZ() + dZ);
-                  if (this.cavedweller.level().getBlockState(this.checkBlockForTorch).is(Blocks.WALL_TORCH)) {
-                     this.cavedweller.level().destroyBlock(this.checkBlockForTorch, true);
-                  } else if (this.cavedweller.level().getBlockState(this.checkBlockForTorch).is(Blocks.TORCH)) {
-                     this.cavedweller.level().destroyBlock(this.checkBlockForTorch, true);
-                  } else if (this.cavedweller.level().getBlockState(this.checkBlockForTorch).is(Blocks.REDSTONE_WALL_TORCH)) {
-                     this.cavedweller.level().destroyBlock(this.checkBlockForTorch, true);
-                  } else if (this.cavedweller.level().getBlockState(this.checkBlockForTorch).is(Blocks.REDSTONE_TORCH)) {
-                     this.cavedweller.level().destroyBlock(this.checkBlockForTorch, true);
-                  } else if (this.cavedweller.level().getBlockState(this.checkBlockForTorch).is(Blocks.SOUL_WALL_TORCH)) {
-                     this.cavedweller.level().destroyBlock(this.checkBlockForTorch, true);
-                  } else if (this.cavedweller.level().getBlockState(this.checkBlockForTorch).is(Blocks.SOUL_TORCH)) {
-                     this.cavedweller.level().destroyBlock(this.checkBlockForTorch, true);
+                  if (this.cavedweller.level.getBlockState(this.checkBlockForTorch).is(Blocks.WALL_TORCH)) {
+                     this.cavedweller.level.destroyBlock(this.checkBlockForTorch, true);
+                  } else if (this.cavedweller.level.getBlockState(this.checkBlockForTorch).is(Blocks.TORCH)) {
+                     this.cavedweller.level.destroyBlock(this.checkBlockForTorch, true);
+                  } else if (this.cavedweller.level.getBlockState(this.checkBlockForTorch).is(Blocks.REDSTONE_WALL_TORCH)) {
+                     this.cavedweller.level.destroyBlock(this.checkBlockForTorch, true);
+                  } else if (this.cavedweller.level.getBlockState(this.checkBlockForTorch).is(Blocks.REDSTONE_TORCH)) {
+                     this.cavedweller.level.destroyBlock(this.checkBlockForTorch, true);
+                  } else if (this.cavedweller.level.getBlockState(this.checkBlockForTorch).is(Blocks.SOUL_WALL_TORCH)) {
+                     this.cavedweller.level.destroyBlock(this.checkBlockForTorch, true);
+                  } else if (this.cavedweller.level.getBlockState(this.checkBlockForTorch).is(Blocks.SOUL_TORCH)) {
+                     this.cavedweller.level.destroyBlock(this.checkBlockForTorch, true);
                   }
                }
             }
@@ -838,7 +838,7 @@ public class DwellerChaseGoal extends Goal {
          this.resetAttackCooldown();
          this.mob.swing(InteractionHand.MAIN_HAND);
          this.mob.doHurtTarget(pEnemy);
-         pEnemy.hurt(this.mob.level().damageSources().generic(), (float)this.cavedweller.getAttributeValue(Attributes.ATTACK_DAMAGE));
+         pEnemy.hurt(this.mob.level.damageSources().generic(), (float)this.cavedweller.getAttributeValue(Attributes.ATTACK_DAMAGE));
          if (pEnemy.getOffhandItem().is(Items.SHIELD)) {
             pEnemy.getOffhandItem().hurtAndBreak(10000, pEnemy, (e) -> {
                e.broadcastBreakEvent(InteractionHand.OFF_HAND);

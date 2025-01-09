@@ -29,7 +29,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraftforge.event.CreativeModeTabEvent;
 import net.minecraftforge.event.TickEvent.ServerTickEvent;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.event.entity.living.LivingKnockBackEvent;
@@ -105,8 +105,8 @@ public class CaveNoise {
       LOGGER.info("DIRT BLOCK >> {}", ForgeRegistries.BLOCKS.getKey(Blocks.DIRT));
    }
 
-   private void addCreative(BuildCreativeModeTabContentsEvent event) {
-      if (event.getTabKey() != CreativeModeTabs.INGREDIENTS && event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
+   private void addCreative(CreativeModeTabEvent.BuildContents event) {
+      if (event.getTab() != CreativeModeTabs.INGREDIENTS && event.getTab() == CreativeModeTabs.SPAWN_EGGS) {
          event.accept(ModItems.CAVE_DWELLER_SPAWN_EGG);
       }
 
@@ -189,7 +189,7 @@ public class CaveNoise {
       b = Math.min(1.0F, b);
       float vol = this.creepyCaveNoiseMinVol + (this.creepyCaveNoiseMaxVol - this.creepyCaveNoiseMinVol) * b;
       Random rand = new Random();
-      Level level = player.level();
+      Level level = player.level;
       BlockPos playerBlockPos = new BlockPos((int)Math.floor(player.position().x), (int)Math.floor(player.position().y), (int)Math.floor(player.position().z));
       if (this.checkIfPlayerIsSpelunker(player) && !player.isCreative() && !player.isSpectator()) {
          switch(rand.nextInt(4)) {
@@ -218,7 +218,7 @@ public class CaveNoise {
    }
 
    public boolean playVanillaCaveSoundToSpelunkers(ServerPlayer player) {
-      Level level = player.level();
+      Level level = player.level;
       BlockPos playerBlockPos = new BlockPos((int)Math.floor(player.position().x), (int)Math.floor(player.position().y), (int)Math.floor(player.position().z));
       if (this.checkIfPlayerIsSpelunker(player) && !player.isCreative() && !player.isSpectator()) {
          Minecraft.getInstance().getSoundManager().play(new SimpleSoundInstance((SoundEvent)SoundEvents.AMBIENT_CAVE.get(), SoundSource.AMBIENT, 1.0F, 1.0F, RandomSource.create(), playerBlockPos));
@@ -275,7 +275,7 @@ public class CaveNoise {
       if (player == null) {
          return false;
       } else {
-         Level level = player.level();
+         Level level = player.level;
          BlockPos playerBlockPos = new BlockPos((int)Math.floor(player.position().x), (int)Math.floor(player.position().y), (int)Math.floor(player.position().z));
          return player.position().y < 40.0D && !level.canSeeSky(playerBlockPos);
       }

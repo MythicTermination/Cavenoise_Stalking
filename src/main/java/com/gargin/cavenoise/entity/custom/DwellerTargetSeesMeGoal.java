@@ -82,7 +82,7 @@ public class DwellerTargetSeesMeGoal extends NearestAttackableTargetGoal<Player>
       if (this.cavedweller.isInvisible()) {
          return false;
       } else {
-         this.setPendingTarget(this.cavedweller.level().getNearestPlayer(this.cavedweller, 200.0D));
+         this.setPendingTarget(this.cavedweller.level.getNearestPlayer(this.cavedweller, 200.0D));
          if (this.pendingTarget == null) {
             return false;
          } else {

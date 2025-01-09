@@ -15,7 +15,7 @@ public class DwellerBreakInvisGoal extends Goal {
    }
 
    public boolean canUse() {
-      this.pendingTarget = this.cavedweller.level().getNearestPlayer(this.cavedweller, 200.0D);
+      this.pendingTarget = this.cavedweller.level.getNearestPlayer(this.cavedweller, 200.0D);
       return !this.inPlayerLineOfSight() || !this.isPlayerLookingTowards();
    }
 
