@@ -1,0 +1,371 @@
+package de.cadentem.cave_dweller;
+
+import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
+import de.cadentem.cave_dweller.client.CaveDwellerRenderer;
+import de.cadentem.cave_dweller.config.ServerConfig;
+import de.cadentem.cave_dweller.entities.CaveDwellerEntity;
+import de.cadentem.cave_dweller.network.CaveSound;
+import de.cadentem.cave_dweller.network.NetworkHandler;
+import de.cadentem.cave_dweller.registry.ModEntityTypes;
+import de.cadentem.cave_dweller.registry.ModItems;
+import de.cadentem.cave_dweller.registry.ModSounds;
+import de.cadentem.cave_dweller.util.Timer;
+import de.cadentem.cave_dweller.util.Utils;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.util.SpawnUtil;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.lighting.LayerLightEventListener;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.network.PacketDistributor;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import software.bernie.geckolib3.GeckoLib;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+@Mod(CaveDweller.MODID)
+public class CaveDweller {
+    public static final String MODID = "cave_dweller";
+    public static final Logger LOG = LogUtils.getLogger();
+    public static final Random RANDOM = new Random();
+    private int stalkNoiseTimer = 0;
+    private int stalkNoiseMinTime = 800;
+    private int stalkNoiseMaxTime = 1000;
+    private float currentSpeedMod = 1.0F;
+
+
+
+    /** key: resource location of the dimension */
+    private static final HashMap<String, Timer> TIMERS = new HashMap<>();
+
+    public static boolean RELOAD_ALL = false;
+    public static boolean RELOAD_MISSING = false;
+
+    public CaveDweller() {
+        GeckoLib.initialize();
+
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        modEventBus.addListener(this::clientSetup);
+        modEventBus.addListener(this::commonSetup);
+
+        ModItems.register(modEventBus);
+        ModSounds.register(modEventBus);
+        ModEntityTypes.register(modEventBus);
+
+        MinecraftForge.EVENT_BUS.register(this);
+
+        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
+//        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
+    }
+
+    private void clientSetup(final FMLClientSetupEvent event) {
+        EntityRenderers.register(ModEntityTypes.CAVE_DWELLER.get(), CaveDwellerRenderer::new);
+    }
+
+    private void commonSetup(final FMLCommonSetupEvent event) {
+        NetworkHandler.register();
+    }
+
+    @SubscribeEvent
+    public void serverStartup(final ServerStartedEvent event) {
+        RELOAD_ALL = true;
+    }
+
+    @SubscribeEvent
+    public void serverTick(final TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            // Prevent ticking twice per server tick
+            return;
+        }
+
+        if (RELOAD_ALL) {
+            TIMERS.clear();
+            RELOAD_ALL = false;
+        }
+
+        Iterable<ServerLevel> levels = event.getServer().getAllLevels();
+
+        // Not doing this together in the `handeLogic` loop in case the boolean gets set from a different thread
+        if (TIMERS.isEmpty()) {
+            for (ServerLevel level : levels) {
+                String key = level.dimension().location().toString();
+                boolean isRelevant = ServerConfig.DIMENSION_WHITELIST.get().contains(key);
+                this.stalkNoiseTimer -= (int)(1.0F * this.currentSpeedMod);
+
+
+                if (isRelevant) {
+                    TIMERS.put(key, new Timer());
+                }
+            }
+
+            // Check every 5 minutes if any timers are present
+            if (TIMERS.isEmpty() && event.getServer().getTickCount() % (20 * 60 * 5) == 0) {
+                CaveDweller.LOG.debug("There are currently no timers present - are the dimensions properly configured?");
+            }
+
+            RELOAD_ALL = false;
+            RELOAD_MISSING = false;
+
+        } else if (this.stalkNoiseTimer <= 0) {
+            Objects.requireNonNull(event.getServer().getLevel(Level.OVERWORLD)).getPlayers(this::playStalkSoundToSpelunkers);
+        } else if (RELOAD_MISSING) {
+            for (ServerLevel level : levels) {
+                String key = level.dimension().location().toString();
+                boolean isRelevant = TIMERS.get(key) == null && ServerConfig.DIMENSION_WHITELIST.get().contains(key);
+
+                if (isRelevant) {
+                    TIMERS.put(key, new Timer());
+                }
+            }
+
+            RELOAD_MISSING = false;
+        }
+
+        for (ServerLevel level : levels) {
+            String key = level.dimension().location().toString();
+
+            if (TIMERS.get(key) != null) {
+                handleLogic(level);
+            }
+        }
+    }
+
+    private void handleLogic(final ServerLevel level) {
+        if (level == null) {
+            return;
+        }
+
+        List<ServerPlayer> players = level.getPlayers(this::isRelevantPlayer);
+
+        if (players.isEmpty()) {
+            return;
+        }
+
+        String key = level.dimension().location().toString();
+        Timer timer = TIMERS.get(key);
+
+        if (timer.currentVictim == null || players.stream().filter(element -> element.getStringUUID().equals(timer.currentVictim.getStringUUID())).toList().isEmpty()) {
+            timer.currentVictim = players.get(RANDOM.nextInt(players.size()));
+        }
+
+        Iterable<Entity> entities = level.getAllEntities();
+        AtomicInteger caveDwellerCount = new AtomicInteger();
+
+        entities.forEach(entity -> {
+            if (entity instanceof CaveDwellerEntity) {
+                caveDwellerCount.getAndAdd(1);
+            }
+        });
+
+        timer.currentSpawn++;
+        timer.currentNoise++;
+
+        if (timer.isNoiseTimerReached() && (caveDwellerCount.get() > 0 || timer.currentSpawn >= Utils.secondsToTicks(ServerConfig.CAN_SPAWN_MAX.get()) / 2)) {
+            playCaveSoundToSpelunkers(players, timer);
+        }
+
+        if (timer.isSpawnTimerReached() && caveDwellerCount.get() < ServerConfig.MAXIMUM_AMOUNT.get()) {
+            if (RANDOM.nextDouble() <= ServerConfig.SPAWN_CHANCE_PER_TICK.get()) {
+                if (timer.currentVictim != null) {
+                    Optional<CaveDwellerEntity> optionalEntity = Utils.trySpawnMob(timer.currentVictim, ModEntityTypes.CAVE_DWELLER.get(), MobSpawnType.TRIGGERED, level, timer.currentVictim.blockPosition(), 40, /* x & z offset */ 35, /* y offset */ 6, SpawnUtil.Strategy.ON_TOP_OF_COLLIDER);
+
+                    if (optionalEntity.isPresent()) {
+                        playCaveSoundToSpelunkers(players, timer);
+
+                        CaveDwellerEntity caveDweller = optionalEntity.get();
+                        caveDweller.setInvisible(true);
+                        caveDweller.hasSpawned = true;
+
+                        timer.resetSpawnTimer();
+                    } else {
+                        // Spawn failed - potentially try a different player
+                        timer.currentVictim = null;
+                    }
+                }
+            }
+        }
+    }
+
+    private void playCaveSoundToSpelunkers(final List<ServerPlayer> players, final Timer timer) {
+        Entity currentVictim = timer.currentVictim;
+
+        if (currentVictim == null) {
+            return;
+        }
+
+        players.forEach(player -> {
+            ResourceLocation soundLocation = switch (RANDOM.nextInt(4)) {
+                case 1 -> ModSounds.CAVENOISE_2.get().getLocation();
+                case 2 -> ModSounds.CAVENOISE_3.get().getLocation();
+                case 3 -> ModSounds.CAVENOISE_4.get().getLocation();
+                default -> ModSounds.CAVENOISE_1.get().getLocation();
+            };
+
+            if (!ServerConfig.ONLY_PLAY_NOISE_TO_TARGET.get() || player.is(timer.currentVictim)) {
+                NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new CaveSound(soundLocation, currentVictim.blockPosition(), 2.0F, 1.0F));
+            }
+        });
+
+        timer.resetNoiseTimer();
+    }
+    private boolean playStalkSoundToSpelunkers(ServerPlayer player) {
+        Random rand = new Random();
+        BlockPos playerBlockPos = new BlockPos((int)Math.floor(player.position().x + (double)(-25 + rand.nextInt(50))), (int)Math.floor(player.position().y), (int)Math.floor(player.position().z + (double)(-25 + rand.nextInt(50))));
+        if (this.checkIfPlayerIsSpelunker(player) && !player.isCreative() && !player.isSpectator()) {
+            switch(rand.nextInt(5)) {
+                case 0:
+                    Minecraft.getInstance().getSoundManager().play(new SimpleSoundInstance((SoundEvent)ModSounds.DWELLER_STALK_1.get(), SoundSource.AMBIENT, 2.0F, 1.0F, RandomSource.create(), playerBlockPos));
+                    break;
+                case 1:
+                    Minecraft.getInstance().getSoundManager().play(new SimpleSoundInstance((SoundEvent)ModSounds.DWELLER_STALK_2.get(), SoundSource.AMBIENT, 2.0F, 1.0F, RandomSource.create(), playerBlockPos));
+                    break;
+                case 2:
+                    Minecraft.getInstance().getSoundManager().play(new SimpleSoundInstance((SoundEvent)ModSounds.DWELLER_STALK_3.get(), SoundSource.AMBIENT, 2.0F, 1.0F, RandomSource.create(), playerBlockPos));
+                    break;
+                case 3:
+                    Minecraft.getInstance().getSoundManager().play(new SimpleSoundInstance((SoundEvent)ModSounds.DWELLER_STALK_4.get(), SoundSource.AMBIENT, 2.0F, 1.0F, RandomSource.create(), playerBlockPos));
+                    break;
+                case 4:
+                    Minecraft.getInstance().getSoundManager().play(new SimpleSoundInstance((SoundEvent)ModSounds.DWELLER_STALK_5.get(), SoundSource.AMBIENT, 2.0F, 1.0F, RandomSource.create(), playerBlockPos));
+            }
+
+            this.resetStalkNoiseTimer();
+        }
+
+        return true;
+    }
+
+    private void resetStalkNoiseTimer() {
+        Random rand = new Random();
+        this.stalkNoiseTimer = this.stalkNoiseMinTime + rand.nextInt(this.stalkNoiseMaxTime - this.stalkNoiseMinTime);
+    }
+    public boolean checkIfPlayerIsSpelunker(Player player) {
+        if (player == null) {
+            return false;
+        } else {
+            Level level = player.level;
+            BlockPos playerBlockPos = new BlockPos((int)Math.floor(player.position().x), (int)Math.floor(player.position().y), (int)Math.floor(player.position().z));
+            return player.position().y < 40.0D && !level.canSeeSky(playerBlockPos);
+        }
+    }
+
+    private boolean isRelevantPlayer(final ServerPlayer player) {
+        if (!Utils.isValidTarget(player)) {
+            return false;
+        }
+
+        // Height level check
+        if (player.position().y > ServerConfig.SPAWN_HEIGHT.get()) {
+            return false;
+        }
+
+        ServerLevel serverLevel = player.getLevel();
+
+        // Sky light level check
+        // Referenced from DaylightDetectorBlock
+        int actualSkyLightLevel = serverLevel.getBrightness(LightLayer.SKY, player.blockPosition()) - serverLevel.getSkyDarken();
+        float sunAngle = serverLevel.getSunAngle(1.0F);
+
+        if (actualSkyLightLevel > 0) {
+            float f1 = sunAngle < (float) Math.PI ? 0.0F : ((float) Math.PI * 2F);
+            sunAngle += (f1 - sunAngle) * 0.2F;
+            actualSkyLightLevel = Math.round((float) actualSkyLightLevel * Mth.cos(sunAngle));
+        }
+
+        actualSkyLightLevel = Mth.clamp(actualSkyLightLevel, 0, 15);
+
+        if (actualSkyLightLevel > ServerConfig.SKY_LIGHT_LEVEL.get()) {
+            return false;
+        }
+
+        // Block light level check
+        LayerLightEventListener blockLighting = player.getLevel().getLightEngine().getLayerListener(LightLayer.BLOCK);
+
+        if (blockLighting.getLightValue(player.blockPosition()) > ServerConfig.BLOCK_LIGHT_LEVEL.get()) {
+            return false;
+        }
+
+        boolean isOnSurface = Utils.isOnSurface(player);
+
+        if (isOnSurface) {
+            if (!ServerConfig.ALLOW_SURFACE_SPAWN.get()) {
+                return false;
+            }
+
+            return ServerConfig.isInValidBiome(player);
+        }
+
+        return true;
+    }
+
+    public static boolean speedUpTimers(final String key, int spawnDelta, int noiseDelta) {
+        Timer timer = TIMERS.get(key);
+        CaveDweller.LOG.debug("Speeding up timers for the dimension [{}], timer: [{}]", key, timer);
+
+        if (timer != null) {
+            timer.currentSpawn += spawnDelta;
+            timer.currentNoise += noiseDelta;
+            return true;
+        }
+
+        return false;
+    }
+
+    public static Pair<Integer, Integer> getTimer(final String key, final String type) {
+        Timer timer = TIMERS.get(key);
+
+        int current = -1;
+        int target = -1;
+
+        if (timer != null) {
+            switch (type) {
+                case "spawn" -> {
+                    current = timer.currentSpawn;
+                    target = timer.targetSpawn;
+                }
+                case "noise" -> {
+                    current = timer.currentNoise;
+                    target = timer.targetNoise;
+                }
+            }
+        }
+
+        return Pair.of(current, target);
+    }
+
+    public static @Nullable Entity getCurrentVictim(final String key) {
+        Timer timer = TIMERS.get(key);
+
+        if (timer != null) {
+            return timer.currentVictim;
+        }
+
+        return null;
+    }
+}
